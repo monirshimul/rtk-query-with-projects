@@ -4,7 +4,7 @@ export const apiSlice = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: "http://localhost:9000",
   }),
-  tagTypes: ["toGetVideos"],
+  tagTypes: ["toGetVideos", "singleVideo", "relatedVideo"],
   endpoints: (builder) => ({
     getVideos: builder.query({
       query: () => "/videos",
@@ -13,6 +13,7 @@ export const apiSlice = createApi({
     }),
     getSingleVideo: builder.query({
       query: (videoId) => `/videos/${videoId}`,
+      providesTags: (result, error, arg) => [{ type: "singleVideo", id: arg }],
     }),
     getRelatedVideos: builder.query({
       query: ({ id, title }) => {
@@ -21,12 +22,34 @@ export const apiSlice = createApi({
         const queryString = `/videos?${likes.join("&")}&_limit=4`;
         return queryString;
       },
+      providesTags: (result, error, arg) => [
+        { type: "relatedVideo", id: arg.id },
+      ],
     }),
     addVideo: builder.mutation({
       query: (data) => ({
         url: "/videos",
         method: "POST",
         body: data,
+      }),
+      invalidatesTags: ["toGetVideos"],
+    }),
+    editVideo: builder.mutation({
+      query: ({ id, data }) => ({
+        url: `/videos/${id}`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: (result, error, arg) => [
+        "toGetVideos",
+        { type: "singleVideo", id: arg.id },
+        { type: "relatedVideo", id: arg.id },
+      ],
+    }),
+    deleteVideo: builder.mutation({
+      query: (id) => ({
+        url: `/videos/${id}`,
+        method: "DELETE",
       }),
       invalidatesTags: ["toGetVideos"],
     }),
@@ -38,4 +61,6 @@ export const {
   useGetSingleVideoQuery,
   useGetRelatedVideosQuery,
   useAddVideoMutation,
+  useEditVideoMutation,
+  useDeleteVideoMutation,
 } = apiSlice;
